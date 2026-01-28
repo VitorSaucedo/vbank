@@ -10,7 +10,7 @@
 *.rar
 HELP.md
 
-### --- BUILD TOOLS --- ###
+### --- BUILD TOOLS (MAVEN & GRADLE) --- ###
 # Maven
 target/
 pom.xml.tag
@@ -23,7 +23,12 @@ buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
 
-### --- IDEs (INTELLIJ, VS CODE) --- ###
+# Gradle
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+### --- IDEs (INTELLIJ, VS CODE, ECLIPSE, NETBEANS) --- ###
 # IntelliJ IDEA
 .idea/
 *.iws
@@ -33,6 +38,26 @@ out/
 
 # VS Code
 .vscode/
+
+# Eclipse / STS
+.metadata
+.recommenders
+bin/
+tmp/
+.settings/
+.project
+.classpath
+.factorypath
+.apt_generated
+.springBeans
+.sts4-cache
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
 
 ### --- ENVIRONMENT & SECURITY --- ###
 .env
