@@ -1,0 +1,60 @@
+### --- JAVA & SPRING BOOT --- ###
+*.class
+*.log
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+HELP.md
+
+### --- BUILD TOOLS --- ###
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+### --- IDEs (INTELLIJ, VS CODE) --- ###
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# VS Code
+.vscode/
+
+### --- ENVIRONMENT & SECURITY --- ###
+.env
+.env.local
+.env.*.local
+application-*.properties
+application-*.yml
+!application.properties
+!application.yml
+
+### --- OS & LOGS --- ###
+logs/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+### --- DOCKER --- ###
+.docker/
+docker-compose.override.yml
+
+### --- REGRAS DE EXCEÇÃO --- ###
+!**/src/main/**/target/
+!**/src/test/**/target/
+!**/src/main/**/build/
+!**/src/test/**/build/
