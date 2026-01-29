@@ -23,7 +23,7 @@ public class PixKeyMapper {
         return new PixKeyDetailsResponse(
                 maskName(user.getFullName()),
                 maskDocument(user.getDocument()),
-                "NexusBank",
+                "Vbank",
                 pixKey.getAccount().getAccountNumber(),
                 pixKey.getAccount().getAgency()
         );
@@ -34,7 +34,6 @@ public class PixKeyMapper {
     }
 
     private String maskDocument(String doc) {
-        // Máscara para CPF (123.***.***-11)
         return doc.replaceAll("(\\d{3})\\d{5,8}(\\d{2})", "$1.***.***-$2");
     }
 }

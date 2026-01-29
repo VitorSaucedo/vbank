@@ -54,7 +54,7 @@ public class TransactionMapper {
         return new TransactionResponse.AccountInfo(
                 account.getUser().getFullName(),
                 account.getUser().getDocument(),
-                "NexusBank",
+                "Vbank",
                 account.getAgency(),
                 account.getAccountNumber()
         );
