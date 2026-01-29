@@ -7,6 +7,7 @@ import com.vitorsaucedo.vbank.entities.User;
 import com.vitorsaucedo.vbank.services.TransferService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -22,11 +23,13 @@ public class TransferController {
     public ResponseEntity<TransactionResponse> executePix(
             @RequestBody @Valid PixTransferRequest request,
             @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(transferService.executePix(request, user.getId()));
+        TransactionResponse response = transferService.executePix(request, user.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/check-receiver/{key}")
     public ResponseEntity<PixKeyDetailsResponse> checkReceiver(@PathVariable String key) {
-        return ResponseEntity.ok(transferService.findReceiverByPixKey(key));
+        PixKeyDetailsResponse response = transferService.findReceiverByPixKey(key);
+        return ResponseEntity.ok(response);
     }
 }

@@ -19,6 +19,7 @@ public class AccountController {
 
     @GetMapping("/dashboard")
     public ResponseEntity<AccountDashboardResponse> getDashboard(@AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(accountService.getDashboardData(user.getId()));
+        AccountDashboardResponse response = accountService.getDashboardData(user.getId());
+        return ResponseEntity.ok(response);
     }
 }

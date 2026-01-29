@@ -12,6 +12,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/pix-keys")
@@ -24,11 +25,21 @@ public class PixKeyController {
     public ResponseEntity<PixKeyResponse> createKey(
             @RequestBody @Valid PixKeyRequest request,
             @AuthenticationPrincipal User user) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(pixKeyService.createKey(request, user.getId()));
+        PixKeyResponse response = pixKeyService.createKey(request, user.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
     public ResponseEntity<List<PixKeyResponse>> listMyKeys(@AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(pixKeyService.listKeysByUserId(user.getId()));
+        List<PixKeyResponse> keys = pixKeyService.listKeysByUserId(user.getId());
+        return ResponseEntity.ok(keys);
+    }
+
+    @DeleteMapping("/{keyId}")
+    public ResponseEntity<Void> deleteKey(
+            @PathVariable UUID keyId,
+            @AuthenticationPrincipal User user) {
+        pixKeyService.deleteKey(keyId, user.getId());
+        return ResponseEntity.noContent().build();
     }
 }

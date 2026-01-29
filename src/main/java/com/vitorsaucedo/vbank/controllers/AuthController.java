@@ -20,12 +20,9 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@RequestBody @Valid UserRegistrationRequest request) {
-        // O Service agora retorna o DTO com ID e número da conta
         UserResponse response = authService.register(request);
-
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
-
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody @Valid LoginRequest request) {

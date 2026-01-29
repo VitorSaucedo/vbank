@@ -21,6 +21,7 @@ public class TransactionController {
 
     @GetMapping("/statement")
     public ResponseEntity<List<StatementItemResponse>> getStatement(@AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(transactionService.getStatement(user.getId()));
+        List<StatementItemResponse> statement = transactionService.getStatement(user.getId());
+        return ResponseEntity.ok(statement);
     }
 }
