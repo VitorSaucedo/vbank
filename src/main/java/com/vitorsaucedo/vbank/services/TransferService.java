@@ -1,10 +1,17 @@
 package com.vitorsaucedo.vbank.services;
 
-import com.vitorsaucedo.vbank.dtos.*;
-import com.vitorsaucedo.vbank.entities.*;
+import com.vitorsaucedo.vbank.dtos.AuditLogRequest;
+import com.vitorsaucedo.vbank.dtos.PixKeyDetailsResponse;
+import com.vitorsaucedo.vbank.dtos.PixTransferRequest;
+import com.vitorsaucedo.vbank.dtos.TransactionResponse;
+import com.vitorsaucedo.vbank.entities.BankAccount;
+import com.vitorsaucedo.vbank.entities.PixKey;
+import com.vitorsaucedo.vbank.entities.Transaction;
 import com.vitorsaucedo.vbank.entities.enums.AccountStatus;
-import com.vitorsaucedo.vbank.entities.enums.TransactionStatus;
-import com.vitorsaucedo.vbank.entities.enums.TransactionType;
+import com.vitorsaucedo.vbank.exceptions.InactiveAccountException;
+import com.vitorsaucedo.vbank.exceptions.InvalidDataException;
+import com.vitorsaucedo.vbank.exceptions.InvalidPinException;
+import com.vitorsaucedo.vbank.exceptions.ResourceNotFoundException;
 import com.vitorsaucedo.vbank.mappers.PixKeyMapper;
 import com.vitorsaucedo.vbank.mappers.TransactionMapper;
 import com.vitorsaucedo.vbank.repositories.BankAccountRepository;
@@ -15,6 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -27,43 +35,51 @@ public class TransferService {
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
 
-    // Injeção dos Mappers para limpeza do serviço
     private final TransactionMapper transactionMapper;
     private final PixKeyMapper pixKeyMapper;
 
-    /**
-     * Busca detalhes do recebedor. A lógica de mascaramento (LGPD) agora vive no PixKeyMapper.
-     */
     @Transactional(readOnly = true)
     public PixKeyDetailsResponse findReceiverByPixKey(String key) {
+        if (key == null || key.isBlank()) {
+            throw new InvalidDataException("key", "Chave PIX não pode estar vazia.");
+        }
+
         PixKey pixKey = pixKeyRepository.findByKeyValue(key)
-                .orElseThrow(() -> new RuntimeException("Chave Pix não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Chave Pix", key));
 
         return pixKeyMapper.toDetailsResponse(pixKey);
     }
 
-    /**
-     * Executa a transferência Pix de forma atômica e limpa.
-     */
     @Transactional
     public TransactionResponse executePix(PixTransferRequest request, UUID userId) {
-        // 1. Busca conta do pagador
-        BankAccount payerAccount = accountRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Conta do pagador não encontrada."));
+        validateTransferRequest(request);
 
-        // 2. Validações de segurança e status
+        BankAccount payerAccount = accountRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conta bancária", userId.toString()));
+
         validateTransfer(request, payerAccount);
 
-        // 3. Busca recebedor
         PixKey targetKey = pixKeyRepository.findByKeyValue(request.targetKey())
-                .orElseThrow(() -> new RuntimeException("Chave Pix de destino não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Chave Pix", request.targetKey()));
         BankAccount payeeAccount = targetKey.getAccount();
 
-        // 4. Executa movimentação financeira
+        if (payerAccount.getId().equals(payeeAccount.getId())) {
+            throw new InvalidDataException(
+                    "targetKey",
+                    "Não é possível transferir para sua própria conta."
+            );
+        }
+
+        if (payeeAccount.getStatus() != AccountStatus.ACTIVE) {
+            throw new InvalidDataException(
+                    "targetKey",
+                    "A conta de destino está inativa e não pode receber transferências."
+            );
+        }
+
         payerAccount.withdraw(request.amount());
         payeeAccount.deposit(request.amount());
 
-        // 5. Criação e persistência da transação
         Transaction savedTransaction = transactionRepository.save(
                 transactionMapper.toEntity(request, payerAccount, payeeAccount)
         );
@@ -71,25 +87,72 @@ public class TransferService {
         accountRepository.save(payerAccount);
         accountRepository.save(payeeAccount);
 
-        // 6. Auditoria
         auditLogService.log(new AuditLogRequest(
                 userId,
                 "PIX_SENT",
-                "Pix de R$ " + request.amount() + " para chave: " + request.targetKey()
+                String.format("Pix de R$ %.2f para chave: %s (Conta: %s)",
+                        request.amount(),
+                        request.targetKey(),
+                        payeeAccount.getAccountNumber())
         ));
 
-        // 7. Retorna o comprovante via Mapper
         return transactionMapper.toResponse(savedTransaction);
+    }
+
+    private void validateTransferRequest(PixTransferRequest request) {
+        // Validação de chave PIX
+        if (request.targetKey() == null || request.targetKey().isBlank()) {
+            throw new InvalidDataException(
+                    "targetKey",
+                    "Chave PIX de destino é obrigatória."
+            );
+        }
+
+        if (request.amount() == null || request.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidDataException(
+                    "amount",
+                    "O valor da transferência deve ser maior que zero."
+            );
+        }
+
+        BigDecimal maxAmount = new BigDecimal("50000.00");
+        if (request.amount().compareTo(maxAmount) > 0) {
+            throw new InvalidDataException(
+                    "amount",
+                    String.format("O valor máximo por transação é R$ %.2f", maxAmount)
+            );
+        }
+
+        if (request.transactionPin() == null || request.transactionPin().isBlank()) {
+            throw new InvalidDataException(
+                    "transactionPin",
+                    "PIN de transação é obrigatório."
+            );
+        }
+
+        if (!request.transactionPin().matches("\\d{4}")) {
+            throw new InvalidDataException(
+                    "transactionPin",
+                    "PIN de transação inválido. Deve conter 4 dígitos."
+            );
+        }
     }
 
     private void validateTransfer(PixTransferRequest request, BankAccount payerAccount) {
         if (!passwordEncoder.matches(request.transactionPin(), payerAccount.getUser().getTransactionPin())) {
-            auditLogService.log(new AuditLogRequest(payerAccount.getUser().getId(), "INVALID_PIX_PIN", "PIN incorreto"));
-            throw new RuntimeException("PIN de transação inválido.");
+            auditLogService.log(new AuditLogRequest(
+                    payerAccount.getUser().getId(),
+                    "INVALID_PIX_PIN",
+                    "Tentativa de PIX com PIN incorreto"
+            ));
+            throw new InvalidPinException();
         }
 
         if (payerAccount.getStatus() != AccountStatus.ACTIVE) {
-            throw new RuntimeException("A conta de origem não está ativa.");
+            throw new InactiveAccountException(
+                    "Sua conta está " + payerAccount.getStatus().name().toLowerCase() +
+                            " e não pode realizar transferências."
+            );
         }
     }
 }

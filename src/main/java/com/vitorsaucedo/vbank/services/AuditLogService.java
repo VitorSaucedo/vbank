@@ -8,19 +8,24 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
-    private final AuditLogMapper auditLogMapper; // Injeção do Mapper de auditoria
+    private final AuditLogMapper auditLogMapper;
 
     @Transactional
     public void log(AuditLogRequest request) {
-        // 1. Converte o DTO de requisição para a Entidade AuditLog
         AuditLog auditLog = auditLogMapper.toEntity(request);
-
-        // 2. Persiste o registro no banco de dados
         auditLogRepository.save(auditLog);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AuditLog> findByUserId(UUID userId) {
+        return auditLogRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     }
 }
