@@ -19,7 +19,7 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("Vbank API")
                         .version("1.0")
-                        .description("API de Banco Digital com Pix, Transferências e Auditoria."))
+                        .description("API do banco digital Vbank"))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .components(new Components()
                         .addSecuritySchemes(securitySchemeName,
